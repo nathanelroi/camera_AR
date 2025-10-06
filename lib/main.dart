@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/ar_camera_page.dart';
 import 'screens/result_page.dart';
+import 'screens/calibration_page.dart';
 import 'services/storage_service.dart';
 import 'models/photo_capture.dart';
 
@@ -50,20 +51,30 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startNewCapture() {
+    // First go to the calibration page
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ARCameraPage(),
-      ),
-    ).then((_) => _loadSavedCaptures()); // Refresh when returning
+      MaterialPageRoute(builder: (context) => const CalibrationPage()),
+    ).then((_) {
+      // Check if the widget is still mounted before proceeding
+      if (!mounted) return;
+
+      // After calibration, go to the camera page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ARCameraPage()),
+      ).then((_) {
+        if (mounted) {
+          _loadSavedCaptures(); // Refresh when returning
+        }
+      });
+    });
   }
 
   void _viewCapture(PhotoCapture capture) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => ResultPage(capture: capture),
-      ),
+      MaterialPageRoute(builder: (context) => ResultPage(capture: capture)),
     );
   }
 
@@ -110,10 +121,7 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 8),
                       const Text(
                         'Capture your face from front and profile views for precise measurements',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white70,
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.white70),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -171,14 +179,13 @@ class _HomePageState extends State<HomePage> {
                           child: ListTile(
                             leading: const CircleAvatar(
                               backgroundColor: Colors.blue,
-                              child: Icon(
-                                Icons.face,
-                                color: Colors.white,
-                              ),
+                              child: Icon(Icons.face, color: Colors.white),
                             ),
                             title: Text(
                               'Measurement ${savedCaptures.length - index}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             subtitle: Text(
                               'Captured: ${capture.captureTime.toLocal().toString().split('.')[0]}',
