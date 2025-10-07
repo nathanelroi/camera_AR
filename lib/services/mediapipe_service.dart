@@ -2,11 +2,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:flutter/material.dart';
-import 'arcore_service.dart';
+import 'camera_calibration_service.dart';
 
 class MediaPipeService {
-  static double get _pixelsToMmRatio => ARCoreService.isCalibrated 
-      ? ARCoreService.pixelsToMmRatio 
+  static double get _pixelsToMmRatio => CameraCalibrationService.isCalibrated 
+      ? CameraCalibrationService.pixelsToMmRatio 
       : 0.264583; // Fallback to approximate conversion (96 DPI)
   
   static late PoseDetector _poseDetector;
@@ -165,11 +165,30 @@ class MediaPipeService {
         landmark2.x, landmark2.y
       );
       
-      // Get the current pixels to mm ratio (may be ARCore calibrated or default)
+      // Get the current pixels to mm ratio (may be camera calibrated or default)
       final currentRatio = _pixelsToMmRatio;
-      debugPrint('Using pixels to mm ratio: $currentRatio (ARCore calibrated: ${ARCoreService.isCalibrated})');
+      debugPrint('Using pixels to mm ratio: $currentRatio (Camera calibrated: ${CameraCalibrationService.isCalibrated})');
       
-      measurements[measurementName] = distance * currentRatio;
+      // Use advanced 3D geometry calculation if calibrated
+      if (CameraCalibrationService.isCalibrated) {
+        // Estimate depth for accurate 3D measurement
+        final estimatedDepth = CameraCalibrationService.estimateSubjectDepth(
+          poseLandmarks: {'left_ear': landmark1, 'right_ear': landmark2}
+        );
+        
+        final accurateDistance = CameraCalibrationService.calculateAccurateDistance(
+          x1: landmark1.x,
+          y1: landmark1.y,
+          x2: landmark2.x,
+          y2: landmark2.y,
+          estimatedDepthMm: estimatedDepth,
+        );
+        
+        measurements[measurementName] = accurateDistance;
+      } else {
+        // Fallback to simple pixel distance calculation
+        measurements[measurementName] = distance * currentRatio;
+      }
     }
   }
   
@@ -191,7 +210,8 @@ class MediaPipeService {
       'body_area_mm2': bodyAreaMm2,
       'estimated_body_coverage': 0.6,
       'pixels_to_mm_ratio': currentRatio,
-      'is_arcore_calibrated': ARCoreService.isCalibrated,
+      'is_camera_calibrated': CameraCalibrationService.isCalibrated,
+      'calibration_metrics': CameraCalibrationService.getCalibrationMetrics(),
     };
   }
   

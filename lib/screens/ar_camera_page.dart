@@ -54,15 +54,34 @@ class _ARCameraPageState extends State<ARCameraPage> {
         );
 
         await cameraController!.initialize();
-        setState(() {
-          isLoadingCamera = false;
-        });
+        
+        // Ensure the camera is fully initialized before updating UI
+        if (mounted && cameraController!.value.isInitialized) {
+          setState(() {
+            isLoadingCamera = false;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Camera initialization failed: $e');
-      setState(() {
-        isLoadingCamera = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingCamera = false;
+        });
+        
+        // Show error message to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Camera error: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _initializeCamera,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -228,8 +247,56 @@ class _ARCameraPageState extends State<ARCameraPage> {
         children: [
           // Camera preview
           if (cameraController != null && cameraController!.value.isInitialized)
-            SizedBox.expand(
-              child: CameraPreview(cameraController!),
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.black,
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: cameraController!.value.previewSize?.height ?? 0,
+                  height: cameraController!.value.previewSize?.width ?? 0,
+                  child: CameraPreview(cameraController!),
+                ),
+              ),
+            )
+          else if (isLoadingCamera)
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.black,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Initializing camera...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.black,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.camera_alt, color: Colors.white, size: 64),
+                    SizedBox(height: 16),
+                    Text(
+                      'Camera not available',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
             ),
           
           // Instructions overlay

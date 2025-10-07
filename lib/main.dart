@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'screens/ar_camera_page.dart';
 import 'screens/result_page.dart';
-import 'screens/calibration_page.dart';
+import 'screens/advanced_calibration_page.dart';
 import 'services/storage_service.dart';
+import 'services/camera_calibration_service.dart';
 import 'models/photo_capture.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await CameraCalibrationService.initialize();
   runApp(const CameraMeasureApp());
 }
 
@@ -54,7 +57,7 @@ class _HomePageState extends State<HomePage> {
     // First go to the calibration page
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CalibrationPage()),
+      MaterialPageRoute(builder: (context) => const AdvancedCalibrationPage()),
     ).then((_) {
       // Check if the widget is still mounted before proceeding
       if (!mounted) return;
