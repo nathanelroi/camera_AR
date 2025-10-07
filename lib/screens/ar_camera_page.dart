@@ -247,18 +247,10 @@ class _ARCameraPageState extends State<ARCameraPage> {
         children: [
           // Camera preview
           if (cameraController != null && cameraController!.value.isInitialized)
-            Container(
+            SizedBox(
               width: double.infinity,
               height: double.infinity,
-              color: Colors.black,
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: cameraController!.value.previewSize?.height ?? 0,
-                  height: cameraController!.value.previewSize?.width ?? 0,
-                  child: CameraPreview(cameraController!),
-                ),
-              ),
+              child: CameraPreview(cameraController!),
             )
           else if (isLoadingCamera)
             Container(
