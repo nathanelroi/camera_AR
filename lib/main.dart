@@ -54,24 +54,23 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startNewCapture() {
-    // First go to the calibration page
+    // Go directly to the camera page (skip calibration)
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ARCameraPage()),
+    ).then((_) {
+      if (mounted) {
+        _loadSavedCaptures(); // Refresh when returning
+      }
+    });
+  }
+  
+  void _openCalibration() {
+    // Optional calibration accessible from menu
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AdvancedCalibrationPage()),
-    ).then((_) {
-      // Check if the widget is still mounted before proceeding
-      if (!mounted) return;
-
-      // After calibration, go to the camera page
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ARCameraPage()),
-      ).then((_) {
-        if (mounted) {
-          _loadSavedCaptures(); // Refresh when returning
-        }
-      });
-    });
+    );
   }
 
   void _viewCapture(PhotoCapture capture) {
@@ -88,6 +87,27 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Camera Measure - Face AR'),
         backgroundColor: Colors.blue,
         elevation: 0,
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'calibration') {
+                _openCalibration();
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'calibration',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, size: 20),
+                    SizedBox(width: 8),
+                    Text('Advanced Calibration'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
