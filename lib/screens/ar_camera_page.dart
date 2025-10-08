@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../models/photo_capture.dart';
@@ -31,12 +32,34 @@ class _ARCameraPageState extends State<ARCameraPage> {
   }
 
   Future<void> _initializeApp() async {
+    // Request camera permission first
+    await _requestCameraPermission();
     await _initializeCamera();
+  }
+
+  Future<void> _requestCameraPermission() async {
+    try {
+      // The camera plugin handles permissions automatically,
+      // but we can add explicit permission checking if needed
+      debugPrint('Requesting camera permissions...');
+    } catch (e) {
+      debugPrint('Permission request failed: $e');
+    }
   }
 
   Future<void> _initializeCamera() async {
     try {
+      setState(() {
+        isLoadingCamera = true;
+      });
+
+      // Dispose existing controller if any
+      await cameraController?.dispose();
+      cameraController = null;
+
       cameras = await availableCameras();
+      debugPrint('Available cameras: ${cameras!.length}');
+      
       if (cameras!.isNotEmpty) {
         // Use back camera (rear camera) if available, otherwise use front camera
         final backCamera = cameras!.firstWhere(
@@ -47,20 +70,31 @@ class _ARCameraPageState extends State<ARCameraPage> {
           ),
         );
 
+        debugPrint('Selected camera: ${backCamera.name}, Direction: ${backCamera.lensDirection}');
+
         cameraController = CameraController(
           backCamera,
-          ResolutionPreset.high,
+          ResolutionPreset.medium, // Use medium instead of high for better compatibility
           enableAudio: false,
         );
 
         await cameraController!.initialize();
+        
+        debugPrint('Camera initialized: ${cameraController!.value.isInitialized}');
+        debugPrint('Preview size: ${cameraController!.value.previewSize}');
+        
+        // Wait a bit more to ensure camera is fully ready
+        await Future.delayed(const Duration(milliseconds: 500));
         
         // Ensure the camera is fully initialized before updating UI
         if (mounted && cameraController!.value.isInitialized) {
           setState(() {
             isLoadingCamera = false;
           });
+          debugPrint('Camera UI updated, loading: $isLoadingCamera');
         }
+      } else {
+        throw Exception('No cameras available on device');
       }
     } catch (e) {
       debugPrint('Camera initialization failed: $e');
@@ -245,19 +279,50 @@ class _ARCameraPageState extends State<ARCameraPage> {
       ),
       body: Stack(
         children: [
-          // Camera preview
+          // Camera preview - using a different approach
           if (cameraController != null && cameraController!.value.isInitialized)
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.black,
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: cameraController!.value.previewSize?.height ?? 0,
-                  height: cameraController!.value.previewSize?.width ?? 0,
-                  child: CameraPreview(cameraController!),
-                ),
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  // Main camera preview
+                  Transform.scale(
+                    scale: 1.0,
+                    child: Center(
+                      child: CameraPreview(cameraController!),
+                    ),
+                  ),
+                  // Debug info overlay (remove in production)
+                  if (kDebugMode)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Camera: ${cameraController!.value.isInitialized ? "OK" : "NO"}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                            Text(
+                              'Size: ${cameraController!.value.previewSize?.width}x${cameraController!.value.previewSize?.height}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                            Text(
+                              'Loading: $isLoadingCamera',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             )
           else if (isLoadingCamera)
